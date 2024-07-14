@@ -65,3 +65,12 @@ EOF
   refute_output --partial "278603" # this one has Commodity and InvestmentStock but not Brokerage
 }
 
+@test "Hides fields with high-cardinality keys" {
+  # The customers collection on the sample_analytics database contains a field "tier_and_details" that is keyed by
+  # some sort of "subscription ID". For example,
+  # {tier_and_details: {69f8b6a3c39c42edb540499ee2651b75: {tier: "Bronze", active: true}, c85df12c2e394afb82725b16e1cc6789: {...}}}
+  # We need that field to NOT be pivoted/exploded into subfields, but instead to be presented as a single field
+  run steampipe query "select * from mongodb.customers limit 0" # HACK to get the headers of the table
+  assert_output --partial "| tier_and_details |" # This should be presented as a column header
+  refute_output --partial "| tier_and_details." # If the field is unnested it'll be presented as a series of tier_and_details.<id> fields
+}

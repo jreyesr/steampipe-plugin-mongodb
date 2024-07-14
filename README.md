@@ -80,6 +80,12 @@ Test:
 ./test/bats/bin/bats test/test.bats
 ```
 
+To test the Mongo schema analyzer in isolation, which is on a separate package `mongodb/analyzer`, run:
+
+```bash
+go test -v ./mongodb/analyzer
+```
+
 Further reading:
 
 - [Writing plugins](https://steampipe.io/docs/develop/writing-plugins)

@@ -79,6 +79,35 @@ func (m MixedType) Merge(t Type, gen *Generator) Type {
 	return append(m, t)
 }
 
+// IsNilAndOther checks whether this MixedType is just a combination of a normal type and Nil, since this indicates
+// that a field contains null on some documents and a consistent type on others. Sometimes, this pattern must be
+// handled as if it were of the actual type (e.g. if a field contains strings or nil, it may be useful to treat it as
+// a normal string field that sometimes happens to have nulls, rather than a field with type Union[string, Nil]
+func (m MixedType) IsNilAndOther() bool {
+	if len(m) != 2 {
+		return false
+	}
+	if (m[0] == NilType && m[1] != NilType) || (m[1] == NilType && m[0] != NilType) {
+		return true
+	}
+	return false
+}
+
+// GetNonNilType when called on a MixedType with exactly two child types, one of which is NilType, returns "the
+// other" (i.e. the non-nil) type.
+// If called on a type that isn't a union of NilType and something else, it returns the MixedType that it was called on.
+func (m MixedType) GetNonNilType() Type {
+	if !m.IsNilAndOther() {
+		return m
+	}
+	// return the _other_ type that isn't NilType
+	if m[0] == NilType {
+		return m[1]
+	} else {
+		return m[0]
+	}
+}
+
 type PrimitiveType uint
 
 const (

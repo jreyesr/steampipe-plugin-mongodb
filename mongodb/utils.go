@@ -112,6 +112,15 @@ func getSteampipeTypeForMongoType(ctx context.Context, mongoType analyzer.Type) 
 			return proto.ColumnType_JSON
 		}
 	case analyzer.MixedType:
+		mongoType := mongoType.(analyzer.MixedType)
+		// Union[T, nil] can be meaningfully be simplified to just T, because on Steampipe _all_ columns, no matter
+		// their type, can contain the SQL NULL value. Therefore, if a field is e.g. Union[nil, string], there's no need
+		// to drop down
+		if mongoType.IsNilAndOther() {
+			return getSteampipeTypeForMongoType(ctx, mongoType.GetNonNilType())
+		}
+		// Any other MixedTypes that aren't Union[nil, T] must be presented as a JSONB column, because there's no clean type for it
+		// TODO: But what about, e.g. MixedType{string, Symbol}? It could be presented as TEXT anyways, because both child types become TEXT on Postgres
 		return proto.ColumnType_JSON
 	case analyzer.PrimitiveType:
 		switch mongoType {

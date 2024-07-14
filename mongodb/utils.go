@@ -35,7 +35,7 @@ func getCollectionsOnDatabase(ctx context.Context, connectionString string, dbNa
 	return collNames, err
 }
 
-func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collection) (map[string]proto.ColumnType, error) {
+func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collection, ignoreFields []string) (map[string]proto.ColumnType, error) {
 	// grab some random docs from the collection
 	// TODO: The sample val should be configurable by end user
 	samplingPipeline := bson.D{
@@ -46,7 +46,7 @@ func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collectio
 		return nil, err
 	}
 	defer cursor.Close(ctx)
-	g := analyzer.Generator{}
+	g := analyzer.Generator{StopOnFields: ignoreFields}
 
 	for cursor.Next(ctx) {
 		var sampleDoc bson.M

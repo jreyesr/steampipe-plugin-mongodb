@@ -11,15 +11,16 @@ import (
 
 func tableMongoDB(ctx context.Context, connection *plugin.Connection) (*plugin.Table, error) {
 	collName := ctx.Value(keyCollection).(string)
-	dbName := GetConfig(connection).Database
+	cfg := GetConfig(connection)
+	dbName := cfg.Database
 
-	client, err := connect(ctx, *GetConfig(connection).ConnectionString)
+	client, err := connect(ctx, *cfg.ConnectionString)
 	if err != nil {
 		return nil, err
 	}
 	coll := client.Database(dbName).Collection(collName)
 
-	colTypes, err := getFieldTypesForCollection(ctx, coll)
+	colTypes, err := getFieldTypesForCollection(ctx, coll, cfg.GetFieldsToIgnore(collName))
 	if err != nil {
 		return nil, err
 	}

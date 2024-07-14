@@ -17,7 +17,7 @@ steampipe plugin install jreyesr/mongodb
 
 Set up a MongoDB database. If you don't have one yet, use [MongoDB Atlas's sample data](https://www.mongodb.com/docs/atlas/sample-data/#std-label-load-sample-data).
 
-Run a query (here we're using [the `sample_analytics` database](https://www.mongodb.com/docs/atlas/sample-data/sample-analytics/#std-label-sample-analytics):
+Run a query (here we're using [the `sample_analytics` database](https://www.mongodb.com/docs/atlas/sample-data/sample-analytics/#std-label-sample-analytics)):
 
 ```sql
 select
@@ -32,9 +32,9 @@ where
 
 This plugin is available for the following engines:
 
-| Engine        | Description
-|---------------|------------------------------------------
-| [Steampipe](https://steampipe.io/docs) | The Steampipe CLI exposes APIs and services as a high-performance relational database, giving you the ability to write SQL-based queries to explore dynamic data. Mods extend Steampipe's capabilities with dashboards, reports, and controls built with simple HCL. The Steampipe CLI is a turnkey solution that includes its own Postgres database, plugin management, and mod support.
+| Engine                                 | Description                                                                                                                                                                                                                                                                                                                                                                               |
+|----------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| [Steampipe](https://steampipe.io/docs) | The Steampipe CLI exposes APIs and services as a high-performance relational database, giving you the ability to write SQL-based queries to explore dynamic data. Mods extend Steampipe's capabilities with dashboards, reports, and controls built with simple HCL. The Steampipe CLI is a turnkey solution that includes its own Postgres database, plugin management, and mod support. |
 
 ## Developing
 

@@ -90,7 +90,8 @@ func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collectio
 // getSteampipeTypeForMongoType translates Mongo types, as used in the [analyzer] package, and converts them to Steampipe-specific
 // types from [proto], such as [proto.ColumnType_JSON]. Some rules:
 //   - Literal types (currently only nil) become JSONB
-//   - String(ish) fields, namely Binary, ObjectID, Regex, Javascript (with&without scope) and Symbol, become TEXT
+//   - String(ish) fields, namely Binary, ObjectID, Javascript (with&without scope) and Symbol, become TEXT
+//   - Regex becomes JSONB with the form {pattern: "..:", flags: "..."}
 //   - DBPointer becomes JSONB
 //   - Minkey, Maxkey and Undefined become UNKNOWN columns, which are later dropped
 //   - The rest of primitive types are translated directly (strings, numbers, booleans)
@@ -134,7 +135,7 @@ func getSteampipeTypeForMongoType(ctx context.Context, mongoType analyzer.Type) 
 		case analyzer.PrimitiveObjectId:
 			return proto.ColumnType_STRING
 		case analyzer.PrimitiveRegex:
-			return proto.ColumnType_STRING
+			return proto.ColumnType_JSON
 		case analyzer.PrimitiveJS:
 			return proto.ColumnType_STRING
 		case analyzer.PrimitiveScopedCode:
@@ -155,7 +156,7 @@ func getSteampipeTypeForMongoType(ctx context.Context, mongoType analyzer.Type) 
 			return proto.ColumnType_UNKNOWN
 		}
 	case analyzer.SliceType:
-		// Don't even look into the
+		// Don't even look into the child type, it'll just be a JSONB array
 		return proto.ColumnType_JSON
 	case analyzer.StructType:
 		return proto.ColumnType_JSON
@@ -231,7 +232,7 @@ func mongoTransformFunction(ctx context.Context, d *transform.TransformData) (an
 			return string(converted.Data), nil // We'll send binary fields as strings. TODO: Consider using Base64 or something
 		}
 	case primitive.Regex:
-		return converted.Pattern, nil // we lose the regex flags here, if there were any
+		return map[string]any{"pattern": converted.Pattern, "flags": converted.Options}, nil
 	case primitive.JavaScript:
 		return string(converted), nil
 	case primitive.CodeWithScope:

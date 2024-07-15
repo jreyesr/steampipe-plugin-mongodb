@@ -21,7 +21,7 @@ func tableMongoDB(ctx context.Context, connection *plugin.Connection) (*plugin.T
 	}
 	coll := client.Database(dbName).Collection(collName)
 
-	colTypes, err := getFieldTypesForCollection(ctx, coll, cfg.GetFieldsToIgnore(collName))
+	colTypes, err := getFieldTypesForCollection(ctx, coll, cfg.GetSampleSize(), cfg.GetFieldsToIgnore(collName))
 	if err != nil {
 		return nil, err
 	}

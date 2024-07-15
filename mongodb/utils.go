@@ -35,11 +35,10 @@ func getCollectionsOnDatabase(ctx context.Context, connectionString string, dbNa
 	return collNames, err
 }
 
-func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collection, ignoreFields []string) (map[string]proto.ColumnType, error) {
+func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collection, sampleSize int, ignoreFields []string) (map[string]proto.ColumnType, error) {
 	// grab some random docs from the collection
-	// TODO: The sample val should be configurable by end user
 	samplingPipeline := bson.D{
-		{"$sample", bson.M{"size": 4}},
+		{"$sample", bson.M{"size": sampleSize}},
 	}
 	cursor, err := collection.Aggregate(ctx, mongo.Pipeline{samplingPipeline})
 	if err != nil {

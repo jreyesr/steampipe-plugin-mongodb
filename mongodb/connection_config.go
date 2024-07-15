@@ -12,6 +12,7 @@ type MongoDBConfig struct {
 	ConnectionString    *string  `cty:"connection_string"`
 	Database            string   `cty:"database"`
 	CollectionsToExpose []string `cty:"collections_to_expose"`
+	SampleSize          *int     `cty:"sample_size"`
 	FieldsToIgnore      []string `cty:"fields_to_ignore"`
 }
 
@@ -19,6 +20,7 @@ var ConfigSchema = map[string]*schema.Attribute{
 	"connection_string":     {Type: schema.TypeString},
 	"database":              {Type: schema.TypeString, Required: true},
 	"collections_to_expose": {Type: schema.TypeList, Elem: &schema.Attribute{Type: schema.TypeString}},
+	"sample_size":           {Type: schema.TypeInt},
 	"fields_to_ignore":      {Type: schema.TypeList, Elem: &schema.Attribute{Type: schema.TypeString}},
 }
 
@@ -61,6 +63,16 @@ func (c MongoDBConfig) GetCollectionsToExpose() []string {
 		return c.CollectionsToExpose
 	}
 	return []string{"*"}
+}
+
+/*
+GetSampleSize returns the sample size that has been set on the plugin config, falling back to 1000 as a default value
+*/
+func (c MongoDBConfig) GetSampleSize() int {
+	if c.SampleSize != nil {
+		return *c.SampleSize
+	}
+	return 1000
 }
 
 /*

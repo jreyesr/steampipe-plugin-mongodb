@@ -7,6 +7,7 @@ import (
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func tableMongoDB(ctx context.Context, connection *plugin.Connection) (*plugin.Table, error) {
@@ -68,8 +69,12 @@ func listMongoDBWithName(collName string) func(ctx context.Context, d *plugin.Qu
 
 		coll := client.Database(dbName).Collection(collName)
 		filter := qualsToMongoFilter(ctx, quals, d.Table.Columns)
-		plugin.Logger(ctx).Info("listMongoDB", "database", dbName, "collection", collName, "filter", filter)
-		cursor, err := coll.Find(ctx, filter)
+		opts := options.Find()
+		if d.QueryContext.Limit != nil {
+			opts.SetLimit(*d.QueryContext.Limit)
+		}
+		plugin.Logger(ctx).Info("listMongoDB", "database", dbName, "collection", collName, "filter", filter, "limit", opts.Limit)
+		cursor, err := coll.Find(ctx, filter, opts)
 		if err != nil {
 			return nil, err
 		}

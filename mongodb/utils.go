@@ -291,6 +291,8 @@ func qualsToMongoFilter(ctx context.Context, inputQuals plugin.KeyColumnQualMap,
 				filterValue = qual.Value.GetDoubleValue()
 			case proto.ColumnType_BOOL:
 				filterValue = qual.Value.GetBoolValue()
+			case proto.ColumnType_TIMESTAMP:
+				filterValue = qual.Value.GetTimestampValue().AsTime()
 			}
 
 			// Not implemented, because they don't have a clean mapping to Mongo operations:

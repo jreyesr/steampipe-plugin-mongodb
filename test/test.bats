@@ -74,3 +74,9 @@ EOF
   assert_output --partial "| tier_and_details |" # This should be presented as a column header
   refute_output --partial "| tier_and_details." # If the field is unnested it'll be presented as a series of tier_and_details.<id> fields
 }
+
+@test "Applied datetime filters" {
+  run steampipe query "select count(*) from mongodb.customers where birthdate > '1990-01-01'"
+  assert_success
+  assert_output --partial "129" # This is the count of documents that satisfy the condition (tested via Compass)
+}

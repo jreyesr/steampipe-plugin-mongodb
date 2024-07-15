@@ -54,7 +54,6 @@ func tableMongoDB(ctx context.Context, connection *plugin.Connection) (*plugin.T
 	}, nil
 }
 
-//go:noinline
 func listMongoDBWithName(collName string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	var _ = 1
 	return func(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {

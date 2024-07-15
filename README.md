@@ -74,7 +74,7 @@ Test:
 
 1. [Install BATS](https://bats-core.readthedocs.io/en/stable/tutorial.html#quick-installation)
 2. Set up this plugin on your local Steampipe instance, pointing to a MongoDB database with [the `sample_analytics` database](https://www.mongodb.com/docs/atlas/sample-data/sample-analytics/#std-label-sample-analytics) loaded
-3. Ensure that you can run `steampipe query "select * from mongodb.accounts`
+3. Ensure that you can run `steampipe query "select * from mongodb.accounts"`
 
 ```bash
 ./test/bats/bin/bats test/test.bats

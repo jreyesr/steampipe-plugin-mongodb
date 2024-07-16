@@ -151,7 +151,8 @@ select
   email,
   birthdate
 from
-  mongodb.customers;
+  mongodb.customers
+LIMIT 10;
 ```
 
 If your column names are complex (e.g. they contain spaces or periods), use identifier quotes:
@@ -162,6 +163,20 @@ select
   "preferences.email"
 from
   mongodb.customers;
+```
+
+### Retrieve a specific item
+
+If you know the ID of a specific item (which is, by convention, stored on the `_id` field 
+and is usually an ObjectID), you can add a `WHERE` condition:
+
+```sql+postgres
+select
+  *
+from
+  mongodb.customers
+where
+  _id='5ca4bbc7a2dd94ee5816238d';
 ```
 
 ### Filter columns

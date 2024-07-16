@@ -3,6 +3,7 @@ package mongodb
 import (
 	"context"
 	"fmt"
+	"github.com/jreyesr/steampipe-plugin-mongodb/mongodb/analyzer"
 	"github.com/turbot/steampipe-plugin-sdk/v5/grpc/proto"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin"
 	"github.com/turbot/steampipe-plugin-sdk/v5/plugin/transform"
@@ -21,7 +22,11 @@ func tableMongoDB(ctx context.Context, connection *plugin.Connection) (*plugin.T
 	}
 	coll := client.Database(dbName).Collection(collName)
 
-	colTypes, err := getFieldTypesForCollection(ctx, coll, cfg.GetSampleSize(), cfg.GetFieldsToIgnore(collName))
+	typeMap, err := getFieldTypesForCollection(ctx, coll, cfg.GetSampleSize(), cfg.GetFieldsToIgnore(collName))
+	if err != nil {
+		return nil, err
+	}
+	colTypes, err := convertMongoTypeToColumnTypes(ctx, typeMap)
 	if err != nil {
 		return nil, err
 	}
@@ -47,14 +52,14 @@ func tableMongoDB(ctx context.Context, connection *plugin.Connection) (*plugin.T
 		Name:        collName,
 		Description: fmt.Sprintf("Collection %s on database %s", coll.Name(), coll.Database().Name()),
 		List: &plugin.ListConfig{
-			Hydrate:    listMongoDBWithName(collName),
+			Hydrate:    listMongoDBWithName(collName, typeMap),
 			KeyColumns: quals,
 		},
 		Columns: cols,
 	}, nil
 }
 
-func listMongoDBWithName(collName string) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
+func listMongoDBWithName(collName string, typeMap analyzer.StructType) func(ctx context.Context, d *plugin.QueryData, h *plugin.HydrateData) (interface{}, error) {
 	var _ = 1
 	return func(ctx context.Context, d *plugin.QueryData, _ *plugin.HydrateData) (interface{}, error) {
 		quals := d.Quals
@@ -67,7 +72,7 @@ func listMongoDBWithName(collName string) func(ctx context.Context, d *plugin.Qu
 		dbName := GetConfig(d.Connection).Database
 
 		coll := client.Database(dbName).Collection(collName)
-		filter := qualsToMongoFilter(ctx, quals, d.Table.Columns)
+		filter := qualsToMongoFilter(ctx, quals, d.Table.Columns, typeMap)
 		opts := options.Find()
 		if d.QueryContext.Limit != nil {
 			opts.SetLimit(*d.QueryContext.Limit)

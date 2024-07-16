@@ -257,6 +257,27 @@ func (s StructType) Merge(t Type, gen *Generator) Type {
 	return MixedType{s, t}
 }
 
+/*
+GetTypeOfChild receives a period-separated path to a field, that must be reachable from this StructType, and returns
+the type of that child.
+
+For example, if the receiver is StructType{nested: StructType{field: PrimitiveString}}, then GetTypeOfChild("nested.field")
+returns PrimitiveString (i.e. the type that is obtained by navigating first to nested and then to field)
+*/
+func (s StructType) GetTypeOfChild(path string) (Type, error) {
+	pathComponents := strings.Split(path, ".")
+	var finalType Type = s
+	for _, component := range pathComponents {
+		if _, ok := finalType.(StructType); !ok {
+			return nil, fmt.Errorf("path %s isn't valid on type %#v, reached %#v which isn't StructType", path, s, finalType)
+		} else {
+			asStruct := finalType.(StructType)
+			finalType = asStruct[component]
+		}
+	}
+	return finalType, nil
+}
+
 // TypeOf receives an arbitrary value v, taken from a MongoDB database, and returns the Type that
 // the value maps to. The stack parameter is the current path (in the entire document) that this value is located at,
 // for example, if the original doc is {a: {b: 1}}, it'd be TypeOf({b: 1}, {"a"}), or TypeOf(1, {"a", "b"})

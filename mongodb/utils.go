@@ -35,7 +35,7 @@ func getCollectionsOnDatabase(ctx context.Context, connectionString string, dbNa
 	return collNames, err
 }
 
-func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collection, sampleSize int, ignoreFields []string) (map[string]proto.ColumnType, error) {
+func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collection, sampleSize int, ignoreFields []string) (analyzer.StructType, error) {
 	// grab some random docs from the collection
 	samplingPipeline := bson.D{
 		{"$sample", bson.M{"size": sampleSize}},
@@ -69,6 +69,10 @@ func getFieldTypesForCollection(ctx context.Context, collection *mongo.Collectio
 	//   "active_features": SliceType{PrimitiveString},
 	// }
 
+	return typeMap, nil
+}
+
+func convertMongoTypeToColumnTypes(ctx context.Context, typeMap analyzer.StructType) (map[string]proto.ColumnType, error) {
 	finalTypes := map[string]proto.ColumnType{}
 	for fieldName, fieldType := range typeMap {
 		// This runs over each top-level field in the inferred schema
@@ -270,14 +274,26 @@ func qualsForColumnOfType(colName string, t proto.ColumnType) *plugin.KeyColumn 
 	}
 }
 
-func qualsToMongoFilter(ctx context.Context, inputQuals plugin.KeyColumnQualMap, columns []*plugin.Column) bson.D {
+/*
+qualsToMongoFilter receives a set of Steampipe quals (i.e. WHERE conditions such as WHERE age>1.2), plus some metadata
+about the table, and returns a set of MongoDB-valid filters in JSON format https://www.mongodb.com/docs/manual/reference/operator/query/
+(e.g. {age: {$gt: 1.2}}).
+
+Some examples:
+  - WHERE age>1.2 => {"age": {"$gt": 1.2}}
+  - WHERE "sub.field"='some val' => {"sub.field": {"$eq": "some val"}}
+  - WHERE field1='val1' AND field2>1 => {"field1": {"$eq": "val1"}, "field2": {"$gt": 1}}
+  - WHERE string_field!~'[Ss]teampipe' => {"string_field": {"$not": {"$regex": "[Ss]teampipe"}}}
+  - WHERE _id='5ca4bbc7a2dd94ee5816238d' => {"_id": {"$eq": ObjectID("5ca4bbc7a2dd94ee5816238d")}}
+*/
+func qualsToMongoFilter(ctx context.Context, inputQuals plugin.KeyColumnQualMap, columnsSp []*plugin.Column, columnsMongo analyzer.StructType) bson.D {
 	filter := bson.D{}
 	for _, filteredColumn := range inputQuals {
 		for _, qual := range filteredColumn.Quals {
 			colName := qual.Column
 			plugin.Logger(ctx).Info("qualsToMongoFilter", qual)
-			colIndex := slices.IndexFunc(columns, func(c *plugin.Column) bool { return c.Name == colName })
-			col := columns[colIndex]
+			colIndex := slices.IndexFunc(columnsSp, func(c *plugin.Column) bool { return c.Name == colName })
+			col := columnsSp[colIndex]
 
 			var filterValue any
 			switch col.Type {
@@ -293,6 +309,28 @@ func qualsToMongoFilter(ctx context.Context, inputQuals plugin.KeyColumnQualMap,
 				filterValue = qual.Value.GetBoolValue()
 			case proto.ColumnType_TIMESTAMP:
 				filterValue = qual.Value.GetTimestampValue().AsTime()
+			}
+
+			// Special handling for columns that came from ObjectID fields:
+			// ObjectID columns are presented as STRING (TEXT), but when applying quals we need to use the actual ObjectIDs
+			// In other words, if _id was an ObjectID and we receive WHERE _id='asdfg...', that will come in as a qual
+			// on a STRING column. However, for MongoDB, {_id: {$eq: "asdfg..."}} does NOT work as expected:
+			// Mongo requires comparisons to ObjectIDs to be explicit, e.g. {_id: {$eq: ObjectID("asdfg...")}}
+			mongoType, err := columnsMongo.GetTypeOfChild(colName) // grab type of original/source field
+			if err != nil {                                        // Couldn't get the original Mongo type, skip this qual
+				plugin.Logger(ctx).Error(err.Error())
+				continue
+			}
+			if asPrimitive, ok := mongoType.(analyzer.PrimitiveType); ok && asPrimitive == analyzer.PrimitiveObjectId {
+				// We know that this qual involves an originally-ObjectID column, which is presented as STRING to Steampipe
+				// Wrap the string qual with an ObjectID object
+				oid, err := primitive.ObjectIDFromHex(filterValue.(string)) // ObjectIDs are strings, so this cast (should?) be OK
+				if err != nil {
+					// Couldn't convert the incoming string value to an ObjectID, it may not be a valid 12-byte hex string
+					plugin.Logger(ctx).Error(err.Error())
+					continue // skip this qual
+				}
+				filterValue = oid // Overwrite filterValue with the ObjectID-ified version of the original string
 			}
 
 			// Not implemented, because they don't have a clean mapping to Mongo operations:

@@ -5,7 +5,7 @@ connection "mongodb" {
   # in the form that is expected by the official MongoDB Go driver.
   # Can also be set with the `DATABASE_URL` environment variable.
   # Required.
-  # connection_string = "mongodb://username:password@localhost:27017/?appName=Steampipe"
+  # connection_string = "mongodb+srv://readonly:kkdkPZQ9snkF74wE@steampipe.ymuibkv.mongodb.net/?appName=Steampipe"
 
   # The MongoDB database that this plugin will expose.
   # Required.

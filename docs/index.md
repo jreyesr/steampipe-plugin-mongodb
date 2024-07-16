@@ -25,7 +25,7 @@ are also dynamically detected based on a scan of the data that is stored in the 
 
 Example query (assuming a MongoDB database that
 has [the example `sample_analytics` dataset](https://www.mongodb.com/docs/atlas/sample-data/sample-analytics/#std-label-sample-analytics)
-loaded:
+loaded):
 
 ```sql
 select 
@@ -142,3 +142,33 @@ Optional settings:
   that would cause an ever-growing number of columns, `reactions.user_1`, `reactions.user_2`, `reactions.user_3`, and so
   on. In such cases, add the subdocument with variable keys to the `fields_to_ignore` list in the
   format `collection:path.to.field`, so the schema analyzer doesn't analyze its contents
+
+### Using views
+
+The plugin can read data from both ordinary MongoDB collections (that store data normally) and also from [MongoDB views](https://www.mongodb.com/docs/manual/core/views/)
+(which are read-only queryable objects that are defined by [an aggregation pipeline](https://www.mongodb.com/docs/manual/core/aggregation-pipeline/#std-label-aggregation-pipeline)).
+
+You may want to use a view if you need:
+
+* More control over which data is exposed to Steampipe (e.g. only expose active records)
+* A way to shape the data _before_ Steampipe even sees it (for example, to convert data that was stored as seconds
+  since the epoch to an actual `DateTime` object, so Steampipe presents it as a `TIMESTAMPTZ`)
+
+To expose a view as a Steampipe table:
+
+1. Create the view on the MongoDB database, [using the standard procedure](https://www.mongodb.com/docs/manual/core/views/create-view/#std-label-manual-views-create)
+2. Ensure that the view is allowed on the `collections_to_expose` configuration (e.g. by setting it to `*`, or by 
+   explicitly adding the view's name as an element on that config item)
+
+Views should behave in exactly the same way as standard collections. They will be sampled and the types of each field
+will be inferred. `WHERE` conditions on those columns, whenever possible, will be forwarded to the view, so MongoDB can 
+[perform optimizations](https://www.mongodb.com/docs/manual/core/aggregation-pipeline-optimization/).
+
+### Using indexes
+
+This plugin can take advantage of [indexes](https://www.mongodb.com/docs/manual/indexes/) defined on the source data.
+Indexes can be used to speed up certain queries, typically those that express a condition on a field or a set of fields.
+
+This requires no special handling. Once [the index is created](https://www.mongodb.com/docs/manual/core/indexes/create-index/)
+(this is done entirely on the MongoDB server), queries that involve the index (e.g. `WHERE indexed_field=1`) will use
+the index so that the entire collection no longer needs to be scanned.
